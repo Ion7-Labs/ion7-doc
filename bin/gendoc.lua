@@ -57,6 +57,9 @@ local function core_module()
         out_dir = out_base .. "/core",
         readme  = readme_arg or (root .. "/../ion7-core/README.md"),
         label   = "ion7-core",
+        id      = "core",
+        prefix  = "ion7%.core%.?",
+        desc    = "LuaJIT FFI bindings for llama.cpp. Direct calls into libllama.so — no subprocess, no HTTP, no allocations per token.",
     }
 end
 
@@ -93,6 +96,9 @@ local function grammar_module()
         out_dir = out_base .. "/grammar",
         readme  = readme_arg or (root .. "/../ion7-grammar/README.md"),
         label   = "ion7-grammar",
+        id      = "grammar",
+        prefix  = "ion7%.grammar%.?",
+        desc    = "GBNF grammar engine in pure Lua. JSON Schema, regex, tool calling, CRANE-style lazy grammar activation.",
     }
 end
 
@@ -106,13 +112,24 @@ local function run(mod)
     io.write("[ion7-doc] " .. mod.label .. " — parsing " .. #mod.files .. " files...\n")
     local corpus = parser.parse_dir(mod.src, mod.files)
     io.write("[ion7-doc] parsed " .. #corpus .. " modules\n")
-    renderer.render(corpus, mod.out_dir, mod.readme)
+    renderer.render(corpus, mod.out_dir, mod.readme, {
+        label  = mod.label,
+        id     = mod.id,
+        prefix = mod.prefix,
+        desc   = mod.desc,
+    })
     io.write("[ion7-doc] done → " .. mod.out_dir .. "/index.html\n\n")
+    return corpus
 end
 
 if module_arg == "all" then
-    run(core_module())
-    run(grammar_module())
+    local core_corpus    = run(core_module())
+    local grammar_corpus = run(grammar_module())
+    -- Combine corpora so the portal shows the real total function count
+    local combined = {}
+    for _, fr in ipairs(core_corpus)    do combined[#combined + 1] = fr end
+    for _, fr in ipairs(grammar_corpus) do combined[#combined + 1] = fr end
+    renderer.render_portal(out_base, combined)
 elseif module_arg == "grammar" then
     run(grammar_module())
 else

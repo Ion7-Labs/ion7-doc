@@ -379,14 +379,16 @@ end
 -- cat_order  : array of category name strings
 -- cat_groups : { [cat] = { {href, display, n_fns, desc}, ... }, ... }
 
-function theme.api_index(n_modules, n_fns, cat_order, cat_groups)
+function theme.api_index(n_modules, n_fns, cat_order, cat_groups, label, desc)
+    label = label or "ion7-core"
+    desc  = desc  or "LuaJIT FFI bindings for llama.cpp. Direct calls into libllama.so — no subprocess, no HTTP, no allocations per token."
     local parts = {}
 
     -- Header
     parts[#parts + 1] = string.format([[
-<p class="text-zinc-700 text-xs font-mono uppercase tracking-widest mb-3">api reference</p>
-<h1 class="text-2xl font-semibold text-zinc-100 tracking-tight mb-2 font-mono">ion7-core</h1>
-<p class="text-zinc-600 text-sm leading-relaxed mb-8 max-w-lg">LuaJIT FFI bindings for llama.cpp. Direct calls into libllama.so — no subprocess, no HTTP, no allocations per token.</p>
+<p class="text-zinc-700 text-xs font-mono uppercase tracking-widest mb-1">%s</p>
+<h1 class="text-2xl font-semibold text-zinc-100 tracking-tight mb-2 font-mono">API Reference</h1>
+<p class="text-zinc-600 text-sm leading-relaxed mb-8 max-w-lg">%s</p>
 <div class="flex gap-6 pb-8 mb-8 border-b border-zinc-800/50">
   <div>
     <span class="font-mono text-zinc-200 text-base font-semibold">%d</span>
@@ -397,7 +399,7 @@ function theme.api_index(n_modules, n_fns, cat_order, cat_groups)
     <span class="font-mono text-zinc-700 text-xs ml-1.5">documented functions</span>
   </div>
 </div>
-]], n_modules, n_fns)
+]], label, desc, n_modules, n_fns)
 
     -- Category groups
     for _, cat in ipairs(cat_order) do
@@ -429,7 +431,7 @@ end
 
 -- ── Landing page ─────────────────────────────────────────────────────────────
 
-function theme.landing_page(corpus)
+function theme.landing_page(corpus, module_id)
     -- Count total documented functions across the corpus
     local total_fns = 0
     for _, fr in ipairs(corpus) do
@@ -455,18 +457,29 @@ repeat
 until vocab:is_eog(token)]]
     code = code:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
 
+    -- Cross-module hrefs:
+    --   nil (portal, docs/index.html)  → core/ and grammar/ (relative to docs/)
+    --   "core"    (docs/core/)         → grammar → ../grammar/
+    --   "grammar" (docs/grammar/)      → core    → ../core/
+    local core_href, grammar_href
+    if     module_id == nil       then core_href = "core/";     grammar_href = "grammar/"
+    elseif module_id == "grammar" then core_href = "../core/"
+    elseif module_id == "core"    then                          grammar_href = "../grammar/"
+    end
+
     -- Module cards
     local modules = {
         {
             name   = "ion7-core",
             status = "stable v1.1",
             desc   = "LuaJIT FFI &rarr; llama.cpp. Zero malloc per token. 84 bridge functions, 4 translation units.",
-            href   = "api/",
+            href   = core_href,
         },
         {
             name   = "ion7-grammar",
             status = "beta v0.1",
             desc   = "GBNF engine in pure Lua. JSON Schema, regex, tool calling, CRANE-style lazy grammar.",
+            href   = grammar_href,
         },
         {
             name   = "ion7-llm",

@@ -1,0 +1,69 @@
+name: Publish docs
+
+on:
+  # Re-deploy when ion7-doc itself changes (renderer, themes, parser, gendoc...)
+  push:
+    branches: [main]
+    paths:
+      - "bin/**"
+      - "parser/**"
+      - "renderer/**"
+      - "themes/**"
+      - ".github/workflows/deploy.yml"
+
+  # Triggered by ion7-core or ion7-grammar on push to their src/ or README.md
+  repository_dispatch:
+    types: [docs]
+
+  # Manual trigger from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout ion7-doc
+        uses: actions/checkout@v4
+        with:
+          path: ion7-doc
+
+      - name: Checkout ion7-core
+        uses: actions/checkout@v4
+        with:
+          repository: ion7-labs/ion7-core
+          path: ion7-core
+
+      - name: Checkout ion7-grammar
+        uses: actions/checkout@v4
+        with:
+          repository: ion7-labs/ion7-grammar
+          path: ion7-grammar
+
+      - name: Checkout ion7-labs.github.io
+        uses: actions/checkout@v4
+        with:
+          repository: ion7-labs/ion7-labs.github.io
+          token: ${{ secrets.PAGES_TOKEN }}
+          path: pages
+
+      - name: Install LuaJIT
+        run: sudo apt-get install -y luajit
+
+      - name: Clean previously generated content
+        run: |
+          rm -rf pages/api pages/core pages/grammar pages/index.html
+
+      - name: Generate docs (core + grammar + portal)
+        working-directory: ion7-doc
+        run: luajit bin/gendoc.lua all ${{ github.workspace }}/pages
+
+      - name: Commit and push
+        working-directory: pages
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add -A
+          git diff --cached --quiet && echo "Nothing to deploy." && exit 0
+          git commit -m "docs: $(date -u +'%Y-%m-%d') — ${{ github.event.client_payload.source || github.repository }}@$(echo ${{ github.sha }} | cut -c1-7)"
+          git push

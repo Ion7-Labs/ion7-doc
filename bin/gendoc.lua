@@ -77,6 +77,8 @@ local function grammar_module()
         src .. "/ast/walk.lua",
         -- Constructors
         src .. "/from/regex.lua",
+        src .. "/from/json/init.lua",
+        src .. "/from/json/converter.lua",
         src .. "/from/types.lua",
         src .. "/from/dynamic.lua",
         -- Composition & complement

@@ -614,7 +614,7 @@ until vocab:is_eog(token)]]
       LuaJIT<br><span class="text-zinc-600">&times;</span> llama.cpp
     </h1>
     <p class="text-zinc-500 text-base leading-relaxed mb-10 max-w-xl">
-      Local LLM inference runtime for LuaJIT. Zero Python. Zero HTTP overhead.<br>
+      Local LLM inference runtime for LuaJIT.<br>
       Direct FFI into libllama.so &mdash; microseconds, not milliseconds.
     </p>
     <div class="flex flex-wrap gap-3">
@@ -634,20 +634,20 @@ until vocab:is_eog(token)]]
 <div class="border-y border-zinc-800/40 bg-zinc-900/20">
   <div class="max-w-5xl mx-auto px-6 md:px-14 py-8 grid grid-cols-2 md:grid-cols-4 gap-8">
     <div>
-      <p class="font-mono text-2xl font-semibold text-zinc-100">~15ms</p>
-      <p class="font-mono text-xs text-zinc-600 mt-1">startup time</p>
+      <p class="font-mono text-2xl font-semibold text-zinc-100">0</p>
+      <p class="font-mono text-xs text-zinc-600 mt-1">Python</p>
     </div>
     <div>
       <p class="font-mono text-2xl font-semibold text-zinc-100">0</p>
       <p class="font-mono text-xs text-zinc-600 mt-1">malloc / token</p>
     </div>
     <div>
-      <p class="font-mono text-2xl font-semibold text-zinc-100">%d</p>
-      <p class="font-mono text-xs text-zinc-600 mt-1">documented functions</p>
+      <p class="font-mono text-2xl font-semibold text-zinc-100">0</p>
+      <p class="font-mono text-xs text-zinc-600 mt-1">http overhead</p>
     </div>
     <div>
-      <p class="font-mono text-2xl font-semibold text-zinc-100">262k</p>
-      <p class="font-mono text-xs text-zinc-600 mt-1">native context tokens</p>
+      <p class="font-mono text-2xl font-semibold text-zinc-100">%d</p>
+      <p class="font-mono text-xs text-zinc-600 mt-1">documented functions</p>
     </div>
   </div>
 </div>

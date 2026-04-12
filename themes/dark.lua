@@ -459,7 +459,7 @@ until vocab:is_eog(token)]]
     local modules = {
         {
             name   = "ion7-core",
-            status = "stable v2.0",
+            status = "stable v1.1",
             desc   = "LuaJIT FFI &rarr; llama.cpp. Zero malloc per token. 84 bridge functions, 4 translation units.",
             href   = "api/",
         },

@@ -119,7 +119,7 @@ function theme.layout_open(sidebar_html, breadcrumb_html)
       %s
     </nav>
     <div class="px-4 py-3 border-t border-zinc-800/50 flex items-center justify-between">
-      <span class="text-zinc-700 text-xs font-mono">v2.0.0</span>
+      <span class="text-zinc-700 text-xs font-mono">v1.2.0</span>
       <a href="../" class="text-zinc-800 hover:text-zinc-500 text-xs font-mono transition-colors">&larr; home</a>
     </div>
   </aside>
@@ -598,7 +598,7 @@ until vocab:is_eog(token)]]
       <span class="font-mono text-zinc-600 text-sm">labs</span>
     </a>
     <nav class="flex items-center gap-6">
-      <a href="api/" class="font-mono text-xs text-zinc-500 hover:text-zinc-300 transition-colors">docs</a>
+      <a href="api.html" class="font-mono text-xs text-zinc-500 hover:text-zinc-300 transition-colors">api</a>
       <a href="https://github.com/ion7-labs" class="font-mono text-xs text-zinc-500 hover:text-zinc-300 transition-colors">github &nearr;</a>
     </nav>
   </div>
@@ -618,8 +618,8 @@ until vocab:is_eog(token)]]
       Direct FFI into libllama.so &mdash; microseconds, not milliseconds.
     </p>
     <div class="flex flex-wrap gap-3">
-      <a href="api/" class="font-mono text-sm bg-zinc-100 text-zinc-950 hover:bg-white px-6 py-3 rounded transition-colors font-medium">
-        API Reference &rarr;
+      <a href="api.html" class="font-mono text-sm bg-zinc-100 text-zinc-950 hover:bg-white px-6 py-3 rounded transition-colors font-medium">
+        API Overview &rarr;
       </a>
       <a href="https://github.com/ion7-labs" class="font-mono text-sm border border-zinc-800 hover:border-zinc-700 text-zinc-500 hover:text-zinc-200 px-6 py-3 rounded transition-colors">
         GitHub &nearr;
@@ -700,10 +700,390 @@ until vocab:is_eog(token)]]
 <footer class="border-t border-zinc-800/40 px-6 md:px-14 py-8">
   <div class="max-w-5xl mx-auto flex items-center justify-between">
     <span class="font-mono text-zinc-800 text-xs">ion7-labs &mdash; 2026</span>
-    <a href="api/" class="font-mono text-zinc-700 hover:text-zinc-500 text-xs transition-colors">API Reference &rarr;</a>
+    <a href="api.html" class="font-mono text-zinc-700 hover:text-zinc-500 text-xs transition-colors">API Overview &rarr;</a>
   </div>
 </footer>
 
+</body>
+</html>
+]]
+
+    return table.concat(parts)
+end
+
+-- ── API Overview page ─────────────────────────────────────────────────────────
+--
+-- Standalone page (no sidebar) listing every module with status, description,
+-- and a link to the API reference when docs exist.
+--
+-- corpus : table from parser.parse_dir() — used only for function counts.
+
+function theme.api_overview_page(corpus)
+    -- Count documented functions across the corpus
+    local total_fns = 0
+    for _, fr in ipairs(corpus or {}) do
+        total_fns = total_fns + #fr.functions
+    end
+
+    -- ── Module registry ───────────────────────────────────────────────────────
+    -- Groups: "available" | "dev" | "planned"
+    local modules = {
+        -- ── Available — docs generated, clickable ────────────────────────────
+        {
+            name   = "ion7-core",
+            status = "stable v1.2.0",
+            group  = "available",
+            href   = "core/",
+            tags   = {"FFI", "llama.cpp", "zero-malloc"},
+            desc   = "LuaJIT FFI &rarr; libllama.so. 84 bridge functions across 4 translation units: model, context, KV cache, speculative decoding, chat templates (Jinja2), sampling, LoRA, reasoning budget, grammar constraints.",
+            detail = "Zero malloc per generated token. KV snapshot/restore. Prefix cache. Full libcommon surface (DRY, XTC, EAGLE3, NGRAM_CACHE).",
+        },
+        {
+            name   = "ion7-grammar",
+            status = "beta v0.1",
+            group  = "available",
+            href   = "grammar/",
+            tags   = {"GBNF", "JSON Schema", "CRANE"},
+            desc   = "GBNF grammar engine in pure Lua. JSON Schema draft-07, ERE &rarr; GBNF, tool-call schemas, enum whitelists, CRANE-style lazy grammar activation.",
+            detail = "GrammarContext for stateful SQL agents. DCCD for Qwen3/DeepSeek-R1 thinking models. Grammar composition algebra (union, sequence, wrap).",
+        },
+        -- ── In Development — no docs link yet ───────────────────────────────
+        {
+            name   = "ion7-llm",
+            status = "beta v0.1",
+            group  = "dev",
+            tags   = {"chat", "streaming", "speculative"},
+            desc   = "High-level chat pipeline on ion7-core. Prefix cache, sliding window, attention sink, multi-session batch, on_evict hook, tool calling ReAct loop.",
+            detail = "Entropy-adaptive speculative decoding (EAGLE3 + ngram_cache). KV checkpoint/rollback. Grammar-constrained generation. Sampler profiles.",
+        },
+        {
+            name   = "ion7-engram",
+            status = "research",
+            group  = "dev",
+            tags   = {"SAE", "superposition", "embeddings"},
+            desc   = "Sparse Autoencoder on LLM embeddings. Validates superposition hypothesis: 0.91 cosine reconstruction, 0.500 Jaccard between related concept clusters.",
+            detail = "SAE:edit() for primitive surgery (zero/set/scale). 64 primitives, K=16 active. Adam sparse, LuaJIT + OpenBLAS FFI. x16 embedding compression.",
+        },
+        {
+            name   = "ion7-flow",
+            status = "PoC",
+            group  = "dev",
+            tags   = {"visual", "React Flow", "Bun"},
+            desc   = "Visual node editor for ion7 pipelines. React Flow + Bun WebSocket server + LuaJIT executor. Each ion7-core function is a wireable node.",
+            detail = "Browser &leftrightarrow; Bun WS &leftrightarrow; LuaJIT. Topological execution. Nodes: Model_load, Ctx_decode, Sampler_chain, Generate, Display.",
+        },
+        {
+            name   = "ion7-nvim",
+            status = "plugin",
+            group  = "dev",
+            tags   = {"Neovim", "streaming"},
+            desc   = "Neovim plugin for in-editor LLM generation. Subprocess-based streaming via jobstart(). Supports multi-turn via --msgs-file.",
+            detail = "Protocol: TOKEN:<encoded> / DONE:<metrics> / ERROR:<msg> over stdout. No HTTP dependency.",
+        },
+        -- ── Planned ──────────────────────────────────────────────────────────
+        {
+            name   = "ion7-embed",
+            status = "planned",
+            group  = "planned",
+            tags   = {"embeddings", "cosine", "pooling"},
+            desc   = "Local embeddings without llama-server. Load Qwen3-Embedding-8B directly via ion7-core FFI — no HTTP, no subprocess.",
+            detail = "Cosine similarity, mean/CLS pooling, batch encoding. Prerequisite for ion7-memory and ion7-rag.",
+        },
+        {
+            name   = "ion7-memory",
+            status = "planned",
+            group  = "planned",
+            tags   = {"memory", "3-layer", "RAG"},
+            desc   = "3-layer persistent memory: hot index (always in context) &plus; topics (on-demand) &plus; session archives (grep only).",
+            detail = "Layer 1: ~150 char pointers. Layer 2: thematic files loaded by semantic distance. Layer 3: transcript archives, grep-only retrieval.",
+        },
+        {
+            name   = "ion7-rag",
+            status = "planned",
+            group  = "planned",
+            tags   = {"SQLite", "vss", "retrieval"},
+            desc   = "Retrieval-Augmented Generation pipeline. SQLite &plus; sqlite-vss vector store. Query &rarr; embed &rarr; cosine search &rarr; context injection.",
+            detail = "Depends on ion7-embed. Semantic Pyramid Indexing (arXiv:2511.16681) — multi-resolution query-adaptive retrieval.",
+        },
+        {
+            name   = "ion7-tts",
+            status = "planned",
+            group  = "planned",
+            tags   = {"TTS", "Kokoro", "streaming"},
+            desc   = "Local text-to-speech via Kokoro-82M FFI. Streaming token&rarr;audio pipeline for &lt;250ms first-sound latency in NPC AI pipelines.",
+            detail = "Part of the STT &rarr; LLM &rarr; TTS NPC pipeline: ~250ms first sound. CPU inference, leaves GPU free for LLM.",
+        },
+        {
+            name   = "ion7-stt",
+            status = "planned",
+            group  = "planned",
+            tags   = {"STT", "Whisper", "streaming"},
+            desc   = "Local speech-to-text via Whisper FFI. Streaming voice input with &lt;50ms segment latency.",
+            detail = "Whisper tiny model, ~30-50ms. Feeds streaming text tokens directly to ion7-llm. GPU-accelerated on CUDA.",
+        },
+        {
+            name   = "ion7-train",
+            status = "planned",
+            group  = "planned",
+            tags   = {"LoRA", "QLoRA", "GGML autograd"},
+            desc   = "Fine-tuning and distillation via GGML autograd. LoRA/QLoRA on RTX 3060. Teacher&rarr;student distillation. No Python.",
+            detail = "AdamW + cosine warmup. Gradient accumulation. Dataset management. L-BFGS in Lua pur (Torch7-inspired). target: &lt;500M models in BF16.",
+        },
+    }
+
+    -- Separate into groups
+    local available, in_dev, planned = {}, {}, {}
+    for _, m in ipairs(modules) do
+        if     m.group == "available" then available[#available + 1] = m
+        elseif m.group == "dev"       then in_dev[#in_dev + 1]       = m
+        else                               planned[#planned + 1]      = m
+        end
+    end
+
+    -- ── Card renderers ────────────────────────────────────────────────────────
+
+    local function tag_pill(t)
+        return string.format(
+            '<span class="font-mono text-zinc-700 text-xs bg-zinc-900 border border-zinc-800/60 px-1.5 py-0.5 rounded">%s</span>',
+            t)
+    end
+
+    local function tags_html(tags)
+        if not tags or #tags == 0 then return "" end
+        local p = {}
+        for _, t in ipairs(tags) do p[#p + 1] = tag_pill(t) end
+        return '<div class="flex flex-wrap gap-1 mb-3">' .. table.concat(p) .. '</div>'
+    end
+
+    -- Available card (bright, clickable)
+    local function available_card(m)
+        return string.format(
+            '<a href="%s" class="group flex flex-col bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-800/60 hover:border-zinc-600 rounded-lg px-5 py-5 transition-all">\n'
+            .. '  <div class="flex items-baseline justify-between mb-3">\n'
+            .. '    <span class="font-mono text-zinc-100 group-hover:text-white text-sm font-semibold transition-colors">%s</span>\n'
+            .. '    <span class="font-mono text-zinc-500 text-xs border border-zinc-700/60 px-2 py-0.5 rounded">%s</span>\n'
+            .. '  </div>\n'
+            .. '  %s\n'
+            .. '  <p class="text-zinc-500 text-xs leading-relaxed mb-3 flex-1">%s</p>\n'
+            .. '  <p class="text-zinc-700 text-xs leading-relaxed mb-4">%s</p>\n'
+            .. '  <span class="font-mono text-zinc-600 group-hover:text-zinc-300 text-xs transition-colors">API Reference &rarr;</span>\n'
+            .. '</a>\n',
+            m.href, m.name, m.status,
+            tags_html(m.tags), m.desc, m.detail)
+    end
+
+    -- In-dev card (medium dim, no link)
+    local function dev_card(m)
+        return string.format(
+            '<div class="flex flex-col border border-zinc-800/40 bg-zinc-900/20 rounded-lg px-5 py-5">\n'
+            .. '  <div class="flex items-baseline justify-between mb-3">\n'
+            .. '    <span class="font-mono text-zinc-400 text-sm font-medium">%s</span>\n'
+            .. '    <span class="font-mono text-zinc-600 text-xs border border-zinc-800/40 px-2 py-0.5 rounded">%s</span>\n'
+            .. '  </div>\n'
+            .. '  %s\n'
+            .. '  <p class="text-zinc-600 text-xs leading-relaxed mb-3 flex-1">%s</p>\n'
+            .. '  <p class="text-zinc-700 text-xs leading-relaxed">%s</p>\n'
+            .. '</div>\n',
+            m.name, m.status,
+            tags_html(m.tags), m.desc, m.detail)
+    end
+
+    -- Planned card (dim, no link)
+    local function planned_card(m)
+        return string.format(
+            '<div class="flex flex-col border border-zinc-800/20 bg-zinc-900/10 rounded-lg px-5 py-4">\n'
+            .. '  <div class="flex items-baseline justify-between mb-2">\n'
+            .. '    <span class="font-mono text-zinc-600 text-sm font-medium">%s</span>\n'
+            .. '    <span class="font-mono text-zinc-800 text-xs">%s</span>\n'
+            .. '  </div>\n'
+            .. '  %s\n'
+            .. '  <p class="text-zinc-700 text-xs leading-relaxed">%s</p>\n'
+            .. '</div>\n',
+            m.name, m.status,
+            tags_html(m.tags), m.desc)
+    end
+
+    -- ── Render ────────────────────────────────────────────────────────────────
+    local parts = {}
+
+    -- Head (same config as landing_page / html_open)
+    parts[#parts + 1] = [[<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Overview &mdash; ion7-labs</title>
+  <script>
+    tailwind = { config: {
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ["'JetBrains Mono'", "'Fira Code'", "ui-monospace", "monospace"],
+            sans: ["'Inter'", "system-ui", "sans-serif"],
+          }
+        }
+      }
+    }}
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    html { background: #09090b; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-300 font-sans antialiased">
+]]
+
+    -- Nav
+    parts[#parts + 1] = [[
+<header class="border-b border-zinc-800/40 px-6 md:px-14 py-4 sticky top-0 bg-zinc-950/90 backdrop-blur z-10">
+  <div class="max-w-5xl mx-auto flex items-center justify-between">
+    <a href="index.html" class="flex items-center gap-1.5 group">
+      <span class="font-mono font-semibold text-zinc-100 text-sm">ion7</span>
+      <span class="font-mono text-zinc-700 text-sm">/</span>
+      <span class="font-mono text-zinc-600 group-hover:text-zinc-400 text-sm transition-colors">labs</span>
+    </a>
+    <nav class="flex items-center gap-6">
+      <a href="index.html" class="font-mono text-xs text-zinc-600 hover:text-zinc-300 transition-colors">&larr; portal</a>
+      <a href="https://github.com/ion7-labs" class="font-mono text-xs text-zinc-500 hover:text-zinc-300 transition-colors">github &nearr;</a>
+    </nav>
+  </div>
+</header>
+]]
+
+    -- Hero
+    parts[#parts + 1] = string.format([[
+<section class="max-w-5xl mx-auto px-6 md:px-14 pt-16 pb-12">
+  <p class="font-mono text-xs text-zinc-700 uppercase tracking-[0.2em] mb-4">ion7-labs</p>
+  <h1 class="text-4xl md:text-5xl font-mono font-semibold text-zinc-100 leading-tight mb-5 tracking-tight">
+    API Overview
+  </h1>
+  <p class="text-zinc-500 text-sm leading-relaxed max-w-xl mb-8">
+    LuaJIT &times; llama.cpp &mdash; modular local LLM runtime.<br>
+    Each module is independent and usable standalone or as part of the full stack.
+  </p>
+  <div class="flex flex-wrap gap-6 pb-8 border-b border-zinc-800/40">
+    <div>
+      <span class="font-mono text-zinc-100 text-2xl font-semibold">%d</span>
+      <span class="font-mono text-zinc-700 text-xs ml-2">documented functions</span>
+    </div>
+    <div>
+      <span class="font-mono text-zinc-100 text-2xl font-semibold">%d</span>
+      <span class="font-mono text-zinc-700 text-xs ml-2">modules available</span>
+    </div>
+    <div>
+      <span class="font-mono text-zinc-600 text-2xl font-semibold">%d</span>
+      <span class="font-mono text-zinc-700 text-xs ml-2">planned</span>
+    </div>
+  </div>
+</section>
+]], total_fns, #available, #planned)
+
+    -- Available section
+    parts[#parts + 1] = [[
+<section class="max-w-5xl mx-auto px-6 md:px-14 pb-12">
+  <p class="font-mono text-xs text-zinc-600 uppercase tracking-widest mb-5">
+    Available &mdash; API reference
+  </p>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+]]
+    for _, m in ipairs(available) do
+        parts[#parts + 1] = available_card(m)
+    end
+    parts[#parts + 1] = "  </div>\n</section>\n"
+
+    -- In Development section
+    if #in_dev > 0 then
+        parts[#parts + 1] = [[
+<section class="max-w-5xl mx-auto px-6 md:px-14 pb-12">
+  <p class="font-mono text-xs text-zinc-700 uppercase tracking-widest mb-5">
+    In Development &mdash; docs coming
+  </p>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+]]
+        for _, m in ipairs(in_dev) do
+            parts[#parts + 1] = dev_card(m)
+        end
+        parts[#parts + 1] = "  </div>\n</section>\n"
+    end
+
+    -- Planned section
+    if #planned > 0 then
+        parts[#parts + 1] = [[
+<section class="max-w-5xl mx-auto px-6 md:px-14 pb-20">
+  <p class="font-mono text-xs text-zinc-800 uppercase tracking-widest mb-5">
+    Planned
+  </p>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+]]
+        for _, m in ipairs(planned) do
+            parts[#parts + 1] = planned_card(m)
+        end
+        parts[#parts + 1] = "  </div>\n</section>\n"
+    end
+
+    -- Stack diagram (layer view)
+    parts[#parts + 1] = [[
+<section class="max-w-5xl mx-auto px-6 md:px-14 pb-20">
+  <p class="font-mono text-xs text-zinc-700 uppercase tracking-widest mb-5">Stack layers</p>
+  <div class="border border-zinc-800/30 rounded-xl overflow-hidden text-xs font-mono">
+    <!-- Application layer -->
+    <div class="bg-zinc-900/20 px-6 py-4 border-b border-zinc-800/30">
+      <p class="text-zinc-700 text-xs uppercase tracking-widest mb-2">Application</p>
+      <div class="flex flex-wrap gap-2">
+        <span class="text-zinc-600 border border-zinc-800/40 px-3 py-1 rounded">Nyx companion</span>
+        <span class="text-zinc-600 border border-zinc-800/40 px-3 py-1 rounded">NPC AI</span>
+        <span class="text-zinc-600 border border-zinc-800/40 px-3 py-1 rounded">ion7-nvim</span>
+        <span class="text-zinc-600 border border-zinc-800/40 px-3 py-1 rounded">ion7-flow</span>
+      </div>
+    </div>
+    <!-- High level -->
+    <div class="bg-zinc-900/15 px-6 py-4 border-b border-zinc-800/30">
+      <p class="text-zinc-700 text-xs uppercase tracking-widest mb-2">High-level</p>
+      <div class="flex flex-wrap gap-2">
+        <a href="grammar/" class="text-zinc-400 hover:text-zinc-200 border border-zinc-700/50 hover:border-zinc-600 px-3 py-1 rounded transition-colors">ion7-grammar</a>
+        <span class="text-zinc-500 border border-zinc-700/40 px-3 py-1 rounded">ion7-llm</span>
+        <span class="text-zinc-600 border border-zinc-800/40 px-3 py-1 rounded">ion7-memory</span>
+        <span class="text-zinc-600 border border-zinc-800/40 px-3 py-1 rounded">ion7-rag</span>
+        <span class="text-zinc-600 border border-zinc-800/40 px-3 py-1 rounded">ion7-tts</span>
+        <span class="text-zinc-600 border border-zinc-800/40 px-3 py-1 rounded">ion7-stt</span>
+        <span class="text-zinc-600 border border-zinc-800/40 px-3 py-1 rounded">ion7-train</span>
+      </div>
+    </div>
+    <!-- Mid -->
+    <div class="bg-zinc-900/10 px-6 py-4 border-b border-zinc-800/30">
+      <p class="text-zinc-700 text-xs uppercase tracking-widest mb-2">Mid-level</p>
+      <div class="flex flex-wrap gap-2">
+        <span class="text-zinc-600 border border-zinc-800/40 px-3 py-1 rounded">ion7-embed</span>
+        <span class="text-zinc-600 border border-zinc-800/40 px-3 py-1 rounded">ion7-kv</span>
+      </div>
+    </div>
+    <!-- Core -->
+    <div class="bg-zinc-900/5 px-6 py-4">
+      <p class="text-zinc-700 text-xs uppercase tracking-widest mb-2">Core</p>
+      <div class="flex flex-wrap gap-2">
+        <a href="core/" class="text-zinc-300 hover:text-zinc-100 border border-zinc-600/60 hover:border-zinc-500 px-3 py-1 rounded transition-colors font-semibold">ion7-core</a>
+        <span class="text-zinc-700 border border-zinc-800/40 px-3 py-1 rounded">&darr; libllama.so + libcommon.a</span>
+        <span class="text-zinc-700 border border-zinc-800/40 px-3 py-1 rounded">&darr; libggml.so (CUDA / CPU)</span>
+      </div>
+    </div>
+  </div>
+</section>
+]]
+
+    -- Footer
+    parts[#parts + 1] = [[
+<footer class="border-t border-zinc-800/40 px-6 md:px-14 py-8">
+  <div class="max-w-5xl mx-auto flex items-center justify-between">
+    <span class="font-mono text-zinc-800 text-xs">ion7-labs &mdash; 2026</span>
+    <a href="index.html" class="font-mono text-zinc-700 hover:text-zinc-500 text-xs transition-colors">&larr; portal</a>
+  </div>
+</footer>
 </body>
 </html>
 ]]

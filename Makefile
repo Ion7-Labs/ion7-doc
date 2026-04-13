@@ -50,7 +50,7 @@ pages:
 	  git clone https://github.com/$(GITHUB_ORG)/ion7-labs.github.io.git "$(PAGES_DIR)"; \
 	fi
 	@# Wipe previously generated content (keep LICENSE, README, CNAME, etc.)
-	@rm -rf "$(PAGES_DIR)/api" "$(PAGES_DIR)/core" "$(PAGES_DIR)/grammar" "$(PAGES_DIR)/index.html"
+	@rm -rf "$(PAGES_DIR)/api.html" "$(PAGES_DIR)/core" "$(PAGES_DIR)/grammar" "$(PAGES_DIR)/index.html"
 	@# Generate core + grammar + portal index.html
 	@luajit bin/gendoc.lua all "$(PAGES_DIR)"
 	@# Commit and push
@@ -63,4 +63,4 @@ pages:
 # ── Clean local output ────────────────────────────────────────────────────────
 
 clean:
-	rm -rf $(DOCS_OUT)/core $(DOCS_OUT)/grammar $(DOCS_OUT)/index.html
+	rm -rf $(DOCS_OUT)/core $(DOCS_OUT)/grammar $(DOCS_OUT)/api.html $(DOCS_OUT)/index.html

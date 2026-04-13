@@ -127,11 +127,12 @@ end
 if module_arg == "all" then
     local core_corpus    = run(core_module())
     local grammar_corpus = run(grammar_module())
-    -- Combine corpora so the portal shows the real total function count
+    -- Combine corpora so the portal and api overview show real function counts
     local combined = {}
     for _, fr in ipairs(core_corpus)    do combined[#combined + 1] = fr end
     for _, fr in ipairs(grammar_corpus) do combined[#combined + 1] = fr end
     renderer.render_portal(out_base, combined)
+    renderer.render_api(out_base, combined)
 elseif module_arg == "grammar" then
     run(grammar_module())
 else

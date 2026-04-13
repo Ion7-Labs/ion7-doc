@@ -295,6 +295,18 @@ function renderer.render_portal(out_dir, corpus)
     io.write("[ion7-doc] portal   → " .. out_dir .. "/index.html\n")
 end
 
+--- Generate the API overview page (docs/api.html).
+--- Lists all modules — available (clickable), in development, and planned.
+---
+--- @param  out_dir  string  Root docs directory (e.g. "docs/").
+--- @param  corpus   table?  Combined corpus — used for function count display.
+function renderer.render_api(out_dir, corpus)
+    out_dir = out_dir:gsub("/$", "")
+    local html = theme.api_overview_page(corpus or {})
+    write_file(out_dir .. "/api.html", html)
+    io.write("[ion7-doc] api      → " .. out_dir .. "/api.html\n")
+end
+
 --- Generate a standalone landing page (README-based) for the given module.
 --- Used by gendoc when building a single module; not used in "all" mode
 --- since the root docs/index.html acts as the portal.

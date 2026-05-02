@@ -11,7 +11,9 @@ on:
       - "themes/**"
       - ".github/workflows/deploy.yml"
 
-  # Triggered by ion7-core or ion7-grammar on push to their src/ or README.md
+  # Triggered by ion7-core / ion7-grammar / ion7-llm on push to their
+  # src/ or README.md (the source repos send `event_type: docs` with
+  # a `client_payload.source` so the commit message can name them).
   repository_dispatch:
     types: [docs]
 
@@ -40,6 +42,12 @@ jobs:
           repository: ion7-labs/ion7-grammar
           path: ion7-grammar
 
+      - name: Checkout ion7-llm
+        uses: actions/checkout@v4
+        with:
+          repository: ion7-labs/ion7-llm
+          path: ion7-llm
+
       - name: Checkout ion7-labs.github.io
         uses: actions/checkout@v4
         with:
@@ -52,9 +60,9 @@ jobs:
 
       - name: Clean previously generated content
         run: |
-          rm -rf pages/api pages/core pages/grammar pages/index.html
+          rm -rf pages/api pages/core pages/grammar pages/llm pages/index.html
 
-      - name: Generate docs (core + grammar + portal)
+      - name: Generate docs (core + grammar + llm + portal)
         working-directory: ion7-doc
         run: luajit bin/gendoc.lua all ${{ github.workspace }}/pages
 

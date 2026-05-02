@@ -7,7 +7,8 @@
 --- Modules:
 ---   core     ion7-core   (default when no arg)
 ---   grammar  ion7-grammar
----   all      both, under out_dir/core/ and out_dir/grammar/
+---   llm      ion7-llm
+---   all      every module, each under out_dir/<id>/
 ---
 --- Defaults:
 ---   out_dir = docs/
@@ -111,6 +112,52 @@ local function grammar_module()
     }
 end
 
+local function llm_module()
+    local src = root .. "/../ion7-llm/src/ion7/llm"
+    local files = {
+        -- Entry point + top-level classes
+        src .. "/init.lua",
+        src .. "/engine.lua",
+        src .. "/pool.lua",
+        src .. "/session.lua",
+        src .. "/response.lua",
+        src .. "/embed.lua",
+        src .. "/stop.lua",
+        -- KV layer
+        src .. "/kv/init.lua",
+        src .. "/kv/slots.lua",
+        src .. "/kv/prefix.lua",
+        src .. "/kv/snapshot.lua",
+        src .. "/kv/eviction.lua",
+        -- Chat-template + demux helpers
+        src .. "/chat/template.lua",
+        src .. "/chat/thinking.lua",
+        src .. "/chat/parse.lua",
+        src .. "/chat/stream.lua",
+        -- Sampler shortcuts
+        src .. "/sampler/profiles.lua",
+        src .. "/sampler/schema.lua",
+        src .. "/sampler/budget.lua",
+        -- Tools
+        src .. "/tools/spec.lua",
+        src .. "/tools/loop.lua",
+        -- Pure-Lua helpers
+        src .. "/util/messages.lua",
+        src .. "/util/partial_json.lua",
+        src .. "/util/log.lua",
+    }
+    return {
+        src     = src,
+        files   = files,
+        out_dir = out_base .. "/llm",
+        readme  = readme_arg or (root .. "/../ion7-llm/README.md"),
+        label   = "ion7-llm",
+        id      = "llm",
+        prefix  = "ion7%.llm%.?",
+        desc    = "Chat pipeline + multi-session inference orchestration on top of ion7-core. Per-seq KV snapshots, prefix cache, three-channel streaming, schema-constrained sampling, interleaved-thinking tool loop, embeddings.",
+    }
+end
+
 -- ── Runner ────────────────────────────────────────────────────────────────────
 
 local parser   = require "parser"
@@ -134,14 +181,18 @@ end
 if module_arg == "all" then
     local core_corpus    = run(core_module())
     local grammar_corpus = run(grammar_module())
+    local llm_corpus     = run(llm_module())
     -- Combine corpora so the portal and api overview show real function counts
     local combined = {}
     for _, fr in ipairs(core_corpus)    do combined[#combined + 1] = fr end
     for _, fr in ipairs(grammar_corpus) do combined[#combined + 1] = fr end
+    for _, fr in ipairs(llm_corpus)     do combined[#combined + 1] = fr end
     renderer.render_portal(out_base, combined)
     renderer.render_api(out_base, combined)
 elseif module_arg == "grammar" then
     run(grammar_module())
+elseif module_arg == "llm" then
+    run(llm_module())
 else
     run(core_module())
 end

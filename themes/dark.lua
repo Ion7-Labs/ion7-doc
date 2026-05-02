@@ -458,13 +458,15 @@ until vocab:is_eog(token)]]
     code = code:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
 
     -- Cross-module hrefs:
-    --   nil (portal, docs/index.html)  → core/ and grammar/ (relative to docs/)
-    --   "core"    (docs/core/)         → grammar → ../grammar/
-    --   "grammar" (docs/grammar/)      → core    → ../core/
-    local core_href, grammar_href
-    if     module_id == nil       then core_href = "core/";     grammar_href = "grammar/"
-    elseif module_id == "grammar" then core_href = "../core/"
-    elseif module_id == "core"    then                          grammar_href = "../grammar/"
+    --   nil (portal, docs/index.html)  → core/, grammar/, llm/ (relative to docs/)
+    --   "core"    (docs/core/)         → grammar → ../grammar/, llm → ../llm/
+    --   "grammar" (docs/grammar/)      → core    → ../core/,    llm → ../llm/
+    --   "llm"     (docs/llm/)          → core    → ../core/,    grammar → ../grammar/
+    local core_href, grammar_href, llm_href
+    if     module_id == nil       then core_href = "core/";     grammar_href = "grammar/";   llm_href = "llm/"
+    elseif module_id == "grammar" then core_href = "../core/";                                llm_href = "../llm/"
+    elseif module_id == "core"    then                           grammar_href = "../grammar/"; llm_href = "../llm/"
+    elseif module_id == "llm"     then core_href = "../core/";  grammar_href = "../grammar/"
     end
 
     -- Module cards
@@ -483,8 +485,9 @@ until vocab:is_eog(token)]]
         },
         {
             name   = "ion7-llm",
-            status = "beta v0.1",
-            desc   = "High-level chat pipeline. Prefix cache, sliding window, attention sink, streaming.",
+            status = "beta v0.2",
+            desc   = "Chat pipeline + multi-session inference. Per-seq KV snapshots, prefix cache, three-channel streaming, schema-constrained sampling, interleaved-thinking tool loop.",
+            href   = llm_href,
         },
         {
             name   = "ion7-engram",
@@ -747,15 +750,16 @@ function theme.api_overview_page(corpus)
             desc   = "GBNF grammar engine in pure Lua. JSON Schema draft-07, ERE &rarr; GBNF, tool-call schemas, enum whitelists, CRANE-style lazy grammar activation.",
             detail = "GrammarContext for stateful SQL agents. DCCD for Qwen3/DeepSeek-R1 thinking models. Grammar composition algebra (union, sequence, wrap).",
         },
-        -- ── In Development — no docs link yet ───────────────────────────────
         {
             name   = "ion7-llm",
-            status = "beta v0.1",
-            group  = "dev",
-            tags   = {"chat", "streaming", "speculative"},
-            desc   = "High-level chat pipeline on ion7-core. Prefix cache, sliding window, attention sink, multi-session batch, on_evict hook, tool calling ReAct loop.",
-            detail = "Entropy-adaptive speculative decoding (EAGLE3 + ngram_cache). KV checkpoint/rollback. Grammar-constrained generation. Sampler profiles.",
+            status = "beta v0.2",
+            group  = "available",
+            href   = "llm/",
+            tags   = {"chat", "multi-session", "RadixAttention", "streaming"},
+            desc   = "Chat pipeline + multi-session inference orchestration. Per-seq KV snapshots, prefix cache, slot pool, fork. Engine + Pool (~6&times; aggregate speedup).",
+            detail = "Mid-generation eviction, RadixAttention exact-match prefix cache, Y-Token sink hook. 4-channel streaming (content/thinking/tool_call_delta/tool_call_done/stop). Format-aware tool extraction (OpenAI/Qwen/Mistral/Hermes). Interleaved-thinking tool loop. Reasoning budget. Embeddings.",
         },
+        -- ── In Development — no docs link yet ───────────────────────────────
         {
             name   = "ion7-engram",
             status = "research",

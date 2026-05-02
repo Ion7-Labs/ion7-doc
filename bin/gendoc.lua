@@ -33,6 +33,7 @@ local function core_module()
     local src = root .. "/../ion7-core/src/ion7/core"
     local files = {
         src .. "/init.lua",
+        -- Class modules + their mixins
         src .. "/model.lua",
         src .. "/model/inspect.lua",
         src .. "/model/meta.lua",
@@ -50,6 +51,12 @@ local function core_module()
         src .. "/custom_sampler.lua",
         src .. "/threadpool.lua",
         src .. "/speculative.lua",
+        -- Pure-Lua utilities re-exported at the top level (ion7.utf8,
+        -- ion7.base64, ion7.log, ion7.tensor).
+        src .. "/util/utf8.lua",
+        src .. "/util/base64.lua",
+        src .. "/util/log.lua",
+        src .. "/util/tensor.lua",
     }
     return {
         src     = src,

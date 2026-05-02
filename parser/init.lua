@@ -136,7 +136,12 @@ local function parse_block(raw_lines, anchor_line)
                         desc = desc,
                     }
 
-                elseif tag == "error" then
+                elseif tag == "error" or tag == "raise" then
+                    -- `@raise` is the LuaCATS / EmmyLua spelling, `@error`
+                    -- is the original ldoc one — both describe the same
+                    -- thing (a function may throw / propagate a Lua error)
+                    -- so we normalise to `tag = "error"` and the theme
+                    -- renders them with the same "raises — ..." hint.
                     item.tags[#item.tags + 1] = {
                         tag  = "error",
                         desc = rest,

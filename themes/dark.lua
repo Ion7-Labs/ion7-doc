@@ -479,8 +479,8 @@ until vocab:is_eog(token)]]
         },
         {
             name   = "ion7-grammar",
-            status = "beta v0.1",
-            desc   = "GBNF engine in pure Lua. JSON Schema, regex, tool calling, CRANE-style lazy grammar.",
+            status = "beta v0.2",
+            desc   = "Grammar engine for LuaJIT. Compiles regex, ABNF, EBNF, JSON Schema, Lua type annotations to GBNF. Per-seq Backtrack + DCCD runtime, pure-Lua fuzzer, format auto-detect.",
             href   = grammar_href,
         },
         {
@@ -743,12 +743,12 @@ function theme.api_overview_page(corpus)
         },
         {
             name   = "ion7-grammar",
-            status = "beta v0.1",
+            status = "beta v0.2",
             group  = "available",
             href   = "grammar/",
-            tags   = {"GBNF", "JSON Schema", "CRANE"},
-            desc   = "GBNF grammar engine in pure Lua. JSON Schema draft-07, ERE &rarr; GBNF, tool-call schemas, enum whitelists, CRANE-style lazy grammar activation.",
-            detail = "GrammarContext for stateful SQL agents. DCCD for Qwen3/DeepSeek-R1 thinking models. Grammar composition algebra (union, sequence, wrap).",
+            tags   = {"GBNF", "ABNF", "EBNF", "JSON Schema", "LPeg"},
+            desc   = "Grammar engine for LuaJIT. Eight input formats (regex / ABNF / EBNF / JSON Schema / type DSL / enum / tool / auto-detect) all yielding the same composable Grammar_obj.",
+            detail = "AST + LPeg-backed parsers. Per-seq Backtrack and DCCD (multi-tenant safe). GrammarContext for stateful SQL agents. Pure-Lua fuzzer. Composition algebra (union, sequence, wrap, interleave).",
         },
         {
             name   = "ion7-llm",

@@ -85,6 +85,8 @@ local function grammar_module()
         src .. "/ast/walk.lua",
         -- Constructors
         src .. "/from/regex.lua",
+        src .. "/from/abnf.lua",
+        src .. "/from/ebnf.lua",
         src .. "/from/json/init.lua",
         src .. "/from/json/converter.lua",
         src .. "/from/types.lua",

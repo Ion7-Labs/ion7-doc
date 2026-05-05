@@ -34,20 +34,74 @@ local function parse_tag(text)
     return tag, rest
 end
 
+--- Consume the type token from `rest`, balanced-aware so that complex
+--- types like `function(a, b)`, `{ key = string, ... }` or pipe unions
+--- `string | Doc | array` survive whitespace-based splitting. Returns
+--- (type_token, remainder_with_leading_ws_stripped).
+local function consume_type(rest)
+    if not rest or rest == "" then return nil, "" end
+    local depth_paren, depth_brace, depth_bracket = 0, 0, 0
+    local i, n = 1, #rest
+    while i <= n do
+        local c = rest:sub(i, i)
+        if c == "(" then
+            depth_paren = depth_paren + 1 ; i = i + 1
+        elseif c == ")" then
+            depth_paren = depth_paren - 1 ; i = i + 1
+        elseif c == "{" then
+            depth_brace = depth_brace + 1 ; i = i + 1
+        elseif c == "}" then
+            depth_brace = depth_brace - 1 ; i = i + 1
+        elseif c == "[" then
+            depth_bracket = depth_bracket + 1 ; i = i + 1
+        elseif c == "]" then
+            depth_bracket = depth_bracket - 1 ; i = i + 1
+        elseif c:match("%s") and depth_paren == 0
+                              and depth_brace == 0
+                              and depth_bracket == 0 then
+            -- Whitespace at top level. Peek past run-of-spaces to see if
+            -- the next non-space char is a `|` — if so, the type is a
+            -- pipe union and we keep consuming the next branch.
+            local j = i + 1
+            while j <= n and rest:sub(j, j):match("%s") do j = j + 1 end
+            if j <= n and rest:sub(j, j) == "|" then
+                -- Skip past the pipe AND the whitespace that may follow,
+                -- so we land directly on the next type token. Without
+                -- the second skip, we'd land on a space and immediately
+                -- close the type at "string |".
+                i = j + 1
+                while i <= n and rest:sub(i, i):match("%s") do i = i + 1 end
+            else
+                local typ = rest:sub(1, i - 1)
+                local remainder = rest:sub(i):gsub("^%s+", "")
+                return typ, remainder
+            end
+        else
+            i = i + 1
+        end
+    end
+    return rest, ""
+end
+
 --- Split `rest` into (name, type, description) for @param / @field tags.
---- Format: `name  type  description text`
+--- Format: `name  type  description text`. Handles complex types via
+--- `consume_type`.
 local function split_param(rest)
-    local name, type_and_desc = rest:match("^(%S+)%s+(.*)")
+    local name, after_name = rest:match("^(%S+)%s+(.*)")
     if not name then return rest, nil, nil end
-    local typ, desc = type_and_desc:match("^(%S+)%s+(.*)")
-    if not typ then return name, type_and_desc, nil end
+
+    local typ, remainder = consume_type(after_name)
+    if not typ or typ == "" then return name, after_name, nil end
+
+    local desc = remainder ~= "" and remainder or nil
     return name, typ, desc
 end
 
 --- Split `rest` into (type, description) for @return tags.
 local function split_return(rest)
-    local typ, desc = rest:match("^(%S+)%s+(.*)")
-    if not typ then return rest, nil end
+    local typ, remainder = consume_type(rest)
+    if not typ or typ == "" then return rest, nil end
+    local desc = remainder ~= "" and remainder or nil
     return typ, desc
 end
 
@@ -85,6 +139,7 @@ local function parse_block(raw_lines, anchor_line)
     local in_usage     = false
     local usage_lines  = {}
     local desc_done    = false   -- once we hit a tag, description is closed
+    local last_tag_obj = nil     -- last tag table — receives continuation lines
 
     for _, raw in ipairs(raw_lines) do
         if raw == "" then
@@ -98,6 +153,7 @@ local function parse_block(raw_lines, anchor_line)
             if tag then
                 desc_done = true
                 in_usage  = false
+                last_tag_obj = nil  -- reset ; we're starting a new tag
 
                 if tag == "module" then
                     item.kind = "module"
@@ -110,31 +166,34 @@ local function parse_block(raw_lines, anchor_line)
                 elseif tag == "field" then
                     if item.kind == "unknown" then item.kind = "class_field" end
                     local name, typ, desc = split_param(rest)
-                    item.tags[#item.tags + 1] = {
+                    last_tag_obj = {
                         tag  = "field",
                         name = name,
                         type = typ,
                         desc = desc,
                     }
+                    item.tags[#item.tags + 1] = last_tag_obj
 
                 elseif tag == "param" then
                     if item.kind == "unknown" then item.kind = "function" end
                     local name, typ, desc = split_param(rest)
-                    item.tags[#item.tags + 1] = {
+                    last_tag_obj = {
                         tag  = "param",
                         name = name,
                         type = typ,
                         desc = desc,
                     }
+                    item.tags[#item.tags + 1] = last_tag_obj
 
                 elseif tag == "return" then
                     if item.kind == "unknown" then item.kind = "function" end
                     local typ, desc = split_return(rest)
-                    item.tags[#item.tags + 1] = {
+                    last_tag_obj = {
                         tag  = "return",
                         type = typ,
                         desc = desc,
                     }
+                    item.tags[#item.tags + 1] = last_tag_obj
 
                 elseif tag == "error" or tag == "raise" then
                     -- `@raise` is the LuaCATS / EmmyLua spelling, `@error`
@@ -142,10 +201,11 @@ local function parse_block(raw_lines, anchor_line)
                     -- thing (a function may throw / propagate a Lua error)
                     -- so we normalise to `tag = "error"` and the theme
                     -- renders them with the same "raises — ..." hint.
-                    item.tags[#item.tags + 1] = {
+                    last_tag_obj = {
                         tag  = "error",
                         desc = rest,
                     }
+                    item.tags[#item.tags + 1] = last_tag_obj
 
                 elseif tag == "usage" then
                     in_usage    = true
@@ -157,12 +217,19 @@ local function parse_block(raw_lines, anchor_line)
 
                 else
                     -- Unknown tag — keep as-is for forward compat
-                    item.tags[#item.tags + 1] = { tag = tag, rest = rest }
+                    last_tag_obj = { tag = tag, rest = rest }
+                    item.tags[#item.tags + 1] = last_tag_obj
                 end
 
             elseif in_usage then
                 -- Inside @usage block: collect verbatim (strip 2-space indent if present)
                 usage_lines[#usage_lines + 1] = raw:match("^  (.*)") or raw
+
+            elseif last_tag_obj then
+                -- Continuation of the current tag's description : multi-line
+                -- `@param opts table { ... }` blocks land here.
+                last_tag_obj.cont = last_tag_obj.cont or {}
+                last_tag_obj.cont[#last_tag_obj.cont + 1] = raw
 
             else
                 if not desc_done then
